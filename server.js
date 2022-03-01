@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 
 var corsOptions = {
-    origin: "http://localhost:3000",
+    origin: "https://manage-task-app.herokuapp.com/",
   };
   app.use(cors(corsOptions));
   // parse requests of content-type - application/json
