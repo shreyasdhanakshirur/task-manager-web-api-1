@@ -1,12 +1,12 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const app = express();
 require('./database/mongoosedb');
-require('./models/tasksModel');
+require('./models/userModel');
 const cors = require("cors");
-const tasksModel = require('./models/tasksModel');
+const userModel = require('./models/userModel');
 require('dotenv').config();
 const PORT = process.env.PORT || 3000;
+const moment = require("moment")
 
 
 var corsOptions = {
@@ -41,97 +41,76 @@ app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`)
   })
 
-  var router = express.Router();
 
-app.post("/addTask/", async (request, response) => {
-    let task = {
-        "title":request.body.title,
-        "description":request.body.description,
-        "dateCreated": new Date().toISOString(),
-        "dateModified":new Date().toISOString(),
-        "status":"NEW"
+app.post("/sign-up/", async (request, response) => {
+    let userObj = {
+        "firstName":request.body.firstName ? request.body.firstName : "",
+        "lastName":request.body.lastName ? request.body.lastName : "",
+        "email": request.body.email ? request.body.email : "",
+        "password":request.body.password ? request.body.password : "",
+        "dateCreated": new Date().toISOString()
     }
-    const user = new tasksModel(task);
-    console.log(user,"Added task")
+    const user = new userModel(userObj);
+    console.log(user,"Added User")
     try {
+      let responseObject = {
+        status : 200,
+        message :"User created successfully",
+        data : user
+      }
       await user.save();
-      response.send(user);
+      response.send(responseObject);
     } catch (error) {
       response.status(500).send(error);
     }
 });
 
-app.get("/getTasks", async (request, response) => {
+app.post("/login", async (request, response) => {
     try {
-     let tasksList = await tasksModel.find({});
-     console.log(tasksList,"Fetched task")
-      response.send(tasksList);
+      let user = {
+        "email":request.body.email,
+        "password":request.body.pwd,
+    }
+    let userInfo = await userModel.findOne(
+      user
+    )
+    console.log(userInfo,"USUSU")
+    if(!userInfo){
+    response.send(500).send("Email & password doesn't match")
+    } else {
+      let responseObject = {
+        status : 200,
+        message :"User logged in successfully"
+      }
+      response.send(responseObject);
+    }
     } catch (error) {
       response.status(500).send(error);
     }
 });
 
-app.post("/addSubTasks", async (request, response) => {
+app.get("/getUsers", async (request, response) => {
     try {
-        let subTasks = {
-            "subTasks": request.body.subTasks,
-            "dateModified": new Date(),
-            "_id": request.body._id
+      let userInfo = await userModel.find({})
+      let responseObject = {
+        status : 200,
+        message :"User logged in successfully",
+        data : userInfo
+      }
+      userInfo.forEach(element => { 
+        console.log(moment(element.dateCreated).format("YYYY-MM-DD hh:mm:ss"))
+        element.dateCreated = moment(element.dateCreated).format('MM/DD/YYYY hh:mm:ss');
+      });
+      const newArr = userInfo.map(obj => {
+        if (obj.id === 1) {
+          return {...obj, dateCreated: moment(element.dateCreated).format("YYYY-MM-DD hh:mm:ss")};
         }
-      await tasksModel.updateOne({ _id: subTasks._id }, { $set: { subTasks: subTasks.subTasks , dateModified : subTasks.dateModified , status : "IN PROGRESS"} }).catch(
-        error => {
-           console.log(error);
-         }
-      );
-      console.log("Successfully updated sub task")
-      response.send({msg:"Updated Subtasks Successfully"});
-    } catch (error) {
-      response.status(500).send(error);
-    }
-});
-
-app.get("/task", async (request, response) => {
-    try {
-      let id = request.query.id;
-      let task = await tasksModel.findOne({"_id":id})
-      console.log(task,"Fetched task")
-      response.send({task:task});
-    } catch (error) {
-      response.status(500).send(error);
-    }
-});
-app.put("/updateTask", async (request, response) => {
-    try {
-        let updatedTask = request.body;
-        updatedTask.dateModified = new Date();
-        let id = request.query.id;
-        if (updatedTask.subTasks.length === 0){
-            updatedTask.status = "COMPLETED";
-            await tasksModel.updateOne({ _id: id }, updatedTask).catch(
-                error => {
-                   console.log(error);
-                 }
-              );
-        } else {
-            await tasksModel.updateOne({ _id: id }, updatedTask).catch(
-                error => {
-                   console.log(error);
-                 }
-              );
-        }
-        console.log("Updated Subtasks Successfully")
-      response.send({msg:"Updated Subtasks Successfully"});
-    } catch (error) {
-      response.status(500).send(error);
-    }
-});
-
-app.get("/taskOnStatus", async (request, response) => {
-    try {
-      let status = request.query.status;
-      status = status.toUpperCase();
-      let task = await tasksModel.find({"status":status})
-      response.send({task:task});
+      
+        return obj;
+      });
+      
+      console.log(newArr)
+      response.send(userInfo);
     } catch (error) {
       response.status(500).send(error);
     }
